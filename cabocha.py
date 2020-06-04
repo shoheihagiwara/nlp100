@@ -26,6 +26,12 @@ if __name__ == "__main__":
         def __repr__(self):
             return str(vars(self))
 
+        def get_pos(self):
+            return self.__pos
+        
+        def get_surface(self):
+            return self.__surface
+
         @classmethod
         def load_from_xml(cls, path):
             """read XML file and return list of list of Morphs.
@@ -52,10 +58,10 @@ if __name__ == "__main__":
             morph = Morph()
             tok_attr_list = list(csv.reader([xml_tok_element.attrib["feature"]]))[0]
             size = len(tok_attr_list)
-            morph.surface = xml_tok_element.text
-            morph.base = tok_attr_list[6] if size > 6 else ""
-            morph.pos = tok_attr_list[0] if size > 0 else ""
-            morph.pos1 = tok_attr_list[1] if size > 1 else ""
+            morph.__surface = xml_tok_element.text
+            morph.__base = tok_attr_list[6] if size > 6 else ""
+            morph.__pos = tok_attr_list[0] if size > 0 else ""
+            morph.__pos1 = tok_attr_list[1] if size > 1 else ""
             return morph
     xml_path = "neko.txt.cabocha"
     llm = Morph.load_from_xml(xml_path)
@@ -126,11 +132,45 @@ if __name__ == "__main__":
 
         def get_link(self):
             return self.__link
+        
+        def get_morphs(self):
+            import copy
+            return copy.deepcopy(self.__morph_list)
 
         def __repr__(self):
             return str(vars(self))
 
     llchunk = Chunk.load_from_xml(xml_path)
     pprint.pprint(llchunk[7])
+
+    # 42. 係り元と係り先の文節の表示
+    def print_chunk_depencency(sentence_chunks):
+        """print dependency between chunks in a sentence.
+
+        premise: parameter chunks consist of one sentence.
+
+        parameter:
+            sentence_chunks: list of chunk
+        """
+
+        for chunk in sentence_chunks:
+            if chunk.get_link() == -1:
+                continue
+            src = chunk
+            dst = sentence_chunks[chunk.get_link()]
+
+            # src、dstどちらかが記号のみで構成されていたら表示しない。
+            has_only_signs = lambda chunk: len(chunk.get_morphs()) == len([morph for morph in chunk.get_morphs() if morph.get_pos() == "記号"])
+            if has_only_signs(src) or has_only_signs(dst):
+                continue
+
+            get_text = lambda chunk: "".join([morph.get_surface() for morph in chunk.get_morphs()])
+            src_text = get_text(src)
+            dst_text = get_text(dst)
+
+            print(src_text + "\t" + dst_text)
+
+    for sentence in llchunk:
+        print_chunk_depencency(sentence)
 
 
