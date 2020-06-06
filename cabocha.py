@@ -66,7 +66,7 @@ if __name__ == "__main__":
     xml_path = "neko.txt.cabocha"
     llm = Morph.load_from_xml(xml_path)
 
-    pprint.pprint([vars(m) for m in llm[2]])
+    #pprint.pprint([vars(m) for m in llm[2]])
 
     # 41. 係り受け解析結果の読み込み（文節・係り受け）
     # 40に加えて，文節を表すクラスChunkを実装せよ．
@@ -133,15 +133,19 @@ if __name__ == "__main__":
         def get_link(self):
             return self.__link
         
+        def get_text(self):
+            return "".join([ m.get_surface() for m in self.get_morphs()])
+
         def get_morphs(self):
             import copy
             return copy.deepcopy(self.__morph_list)
 
         def __repr__(self):
             return str(vars(self))
+        
 
     llchunk = Chunk.load_from_xml(xml_path)
-    pprint.pprint(llchunk[7])
+    #pprint.pprint(llchunk[7])
 
     # 42. 係り元と係り先の文節の表示
     def print_chunk_depencency(sentence_chunks):
@@ -170,7 +174,49 @@ if __name__ == "__main__":
 
             print(src_text + "\t" + dst_text)
 
-    for sentence in llchunk:
-        print_chunk_depencency(sentence)
+    #for sentence in llchunk:
+    #    print_chunk_depencency(sentence)
 
 
+    # 43. 名詞を含む文節が動詞を含む文節に係るものを抽出
+    def print_noun2verb_dependency(sentence_chunks):
+        for chunk in sentence_chunks:
+            if chunk.get_link() == -1:
+                continue
+            src = chunk
+            dst = sentence_chunks[chunk.get_link()]
+
+            # srcに動詞があって、dstに名詞があるときのみ表示する
+            has_at_least_one = lambda chunk, pos: any([morph.get_pos() == pos for morph in chunk.get_morphs()])
+            if not has_at_least_one(src, "名詞") or not has_at_least_one(dst, "動詞"):
+                continue
+
+            get_text = lambda chunk: "".join([morph.get_surface() for morph in chunk.get_morphs() if morph.get_pos() != "記号"])
+            src_text = get_text(src)
+            dst_text = get_text(dst)
+
+            print(src_text + "\t" + dst_text)
+
+    #for sentence in llchunk:
+        #print_noun2verb_dependency(sentence)
+
+    # 44. 係り受け木の可視化
+    import pydot
+    #from IPython.display import Image, display
+
+    graph = pydot.Dot(graph_type='digraph')
+    sentence = llchunk[3]
+    for chunk in sentence:
+        dst = chunk.get_link()
+        if dst == -1:
+            continue
+        dst_chunk_text = sentence[dst].get_text()
+        src_chunk_text = chunk.get_text()
+        e = pydot.Edge( src_chunk_text, dst_chunk_text )
+        graph.add_edge(e)
+    # jupyter notebook 上であれば以下の2行でファイル保存なしに画像を表示できるらしい。今回はやらないが。
+    # plt = Image(graph.create_png())
+    # display(plt)
+
+    # なぜか知らんがencodingをしていしないとだめだ
+    graph.write_svg("nlp100_problem44.svg", encoding='utf-8')
