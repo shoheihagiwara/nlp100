@@ -26,6 +26,9 @@ if __name__ == "__main__":
         def __repr__(self):
             return str(vars(self))
 
+        def get_base(self):
+            return self.__base
+
         def get_pos(self):
             return self.__pos
         
@@ -205,18 +208,45 @@ if __name__ == "__main__":
     #from IPython.display import Image, display
 
     graph = pydot.Dot(graph_type='digraph')
-    sentence = llchunk[3]
+    sentence = llchunk[7]
     for chunk in sentence:
         dst = chunk.get_link()
         if dst == -1:
             continue
         dst_chunk_text = sentence[dst].get_text()
         src_chunk_text = chunk.get_text()
-        e = pydot.Edge( src_chunk_text, dst_chunk_text )
+        e = pydot.Edge(src_chunk_text, dst_chunk_text)
         graph.add_edge(e)
     # jupyter notebook 上であれば以下の2行でファイル保存なしに画像を表示できるらしい。今回はやらないが。
     # plt = Image(graph.create_png())
     # display(plt)
 
-    # なぜか知らんがencodingをしていしないとだめだ
-    graph.write_svg("nlp100_problem44.svg", encoding='utf-8')
+    #### なぜか知らんがencodingをしていしないとだめだ
+    ###graph.write_svg("nlp100_problem44.svg", encoding='utf-8')
+
+    # 45. 動詞の格パターンの抽出
+    path = 'nlp100_problem45_output.txt'
+    if os.path.exists(path):
+        os.remove(path)
+    with open(path, mode='a', encoding='utf8') as f:
+        for sentence in llchunk:
+            for v_index, v_chunk in enumerate(sentence):
+                # 文内の動詞を取り出す
+                first_morph = v_chunk.get_morphs()[0]
+                if first_morph.get_pos() != "動詞":
+                    continue
+                verb_morph = first_morph
+
+                # この動詞に係っている助詞を見つける
+                # (おそらく助詞は英語でparticle)
+                particle_list = []
+                for p_chunk in sentence:
+                    if p_chunk.get_link() != v_index:
+                        continue
+                    particle_list.extend([morph.get_base() 
+                                        for morph in p_chunk.get_morphs() 
+                                        if morph.get_pos() == "助詞"])
+                if len(particle_list) > 0:
+                    print(verb_morph.get_base() + '\t' + ' '.join(sorted(particle_list)), file=f)
+    # 以下のコマンドで「する」「見る」「与える」という動詞の格パターン（コーパス中で出現頻度の高い順に並べよ）に答えられる
+    # $ grep -e $'^する\t' -e $'^見る\t' -e $'^与える\t' nlp100_problem45_output.txt | sort | uniq -c | sort -nr
