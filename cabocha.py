@@ -87,7 +87,6 @@ if __name__ == "__main__":
             self.__link = None
             self.__srcs = []
 
-        
         @classmethod
         def load_from_xml(cls, path):
 
@@ -136,8 +135,9 @@ if __name__ == "__main__":
         def get_link(self):
             return self.__link
         
-        def get_text(self):
-            return "".join([ m.get_surface() for m in self.get_morphs()])
+        def get_text(self, print_symbol=True):
+            return "".join([ m.get_surface() for m in self.get_morphs() 
+                                if print_symbol or m.get_pos() != "記号"])
 
         def get_morphs(self):
             import copy
@@ -225,28 +225,50 @@ if __name__ == "__main__":
     ###graph.write_svg("nlp100_problem44.svg", encoding='utf-8')
 
     # 45. 動詞の格パターンの抽出
-    path = 'nlp100_problem45_output.txt'
-    if os.path.exists(path):
-        os.remove(path)
-    with open(path, mode='a', encoding='utf8') as f:
-        for sentence in llchunk:
-            for v_index, v_chunk in enumerate(sentence):
-                # 文内の動詞を取り出す
-                first_morph = v_chunk.get_morphs()[0]
-                if first_morph.get_pos() != "動詞":
-                    continue
-                verb_morph = first_morph
-
-                # この動詞に係っている助詞を見つける
-                # (おそらく助詞は英語でparticle)
-                particle_list = []
-                for p_chunk in sentence:
-                    if p_chunk.get_link() != v_index:
+    def write_particle_pattern(path, argument=False):
+        if os.path.exists(path):
+            os.remove(path)
+        with open(path, mode='a', encoding='utf8') as f:
+            for sentence in llchunk:
+                for v_index, v_chunk in enumerate(sentence):
+                    # 文内の動詞を取り出す
+                    first_morph = v_chunk.get_morphs()[0]
+                    if first_morph.get_pos() != "動詞":
                         continue
-                    particle_list.extend([morph.get_base() 
-                                        for morph in p_chunk.get_morphs() 
-                                        if morph.get_pos() == "助詞"])
-                if len(particle_list) > 0:
-                    print(verb_morph.get_base() + '\t' + ' '.join(sorted(particle_list)), file=f)
+                    verb_morph = first_morph
+
+                    # この動詞に係っている助詞を見つける
+                    # (おそらく助詞は英語でparticle)
+                    particle_argument_dict = []
+                    for p_chunk in sentence:
+                        if p_chunk.get_link() != v_index:
+                            continue
+                        particle_argument_dict.extend([morph.get_base() 
+                                            for morph in p_chunk.get_morphs() 
+                                            if morph.get_pos() == "助詞"])
+                    if len(particle_argument_dic) > 0:
+                        print(verb_morph.get_base() + '\t' + ' '.join(sorted(particle_list)), file=f)
+
+    #write_particle_pattern(path='nlp100_problem45_output.txt')
     # 以下のコマンドで「する」「見る」「与える」という動詞の格パターン（コーパス中で出現頻度の高い順に並べよ）に答えられる
     # $ grep -e $'^する\t' -e $'^見る\t' -e $'^与える\t' nlp100_problem45_output.txt | sort | uniq -c | sort -nr
+
+
+    # 46. 動詞の格フレーム情報の抽出
+    # TODO 45も間違っているので後で直す。
+
+
+    # 48. 名詞から根へのパスの抽出
+    for sentence in llchunk:
+        for chunk in sentence:
+            if any([ m.get_pos() == "名詞" for m in chunk.get_morphs()]):
+
+                result_list = []
+                result_list.append(chunk.get_text(print_symbol=False))
+                dst = chunk.get_link()
+                while dst != -1:
+                    dst_chunk = sentence[dst]
+                    result_list.append(dst_chunk.get_text(print_symbol=False))
+                    dst = dst_chunk.get_link()
+                if len(result_list) > 1:
+                    print(" -> ".join(result_list))
