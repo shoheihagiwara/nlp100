@@ -1,10 +1,17 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
+import os
+import sys
 import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report
+from sklearn.feature_extraction.text import CountVectorizer
+
+sys.path.append(os.getcwd())
 
 if __name__ == "__main__":
+
+    from lib.utilities import make_bag_of_words
 
     # read csv
     news_corpora = pd.read_csv(
@@ -20,10 +27,7 @@ if __name__ == "__main__":
 
     # 51. 特徴量抽出
     # How: create bag of words
-    vectorizer = CountVectorizer()
-    df_X = pd.DataFrame(vectorizer.fit_transform(
-        news_corpora['title']).toarray())
-    df_X.columns = vectorizer.get_feature_names()
+    df_X, feature_names = make_bag_of_words(news_corpora['title'])
     df_X = pd.concat(
         [df_X, news_corpora['category'].reset_index(drop=True).rename('y_label_category')], axis=1)
 
@@ -44,7 +48,7 @@ if __name__ == "__main__":
 
     # 52. 学習
     # train the model
-    model = LogisticRegression(random_state=821)
+    model = LogisticRegression(random_state=821, max_iter=200)
     model.fit(train.drop('y_label_category', axis=1),
               train['y_label_category'])
 
@@ -55,4 +59,12 @@ if __name__ == "__main__":
 
     # and column names too
     with open('./chapter6/feature_names', mode='w') as f:
-        f.write(vectorizer.get_feature_names())
+        f.write(str(feature_names))
+
+    # 53. 予測
+    # TODO あとでやる。
+
+    # 54. 正解率の計測
+    y_test = test['y_label_category']
+    y_pred = model.predict(test.drop('y_label_category', axis=1))
+    print(classification_report(y_pred=y_pred, y_true=y_test))
