@@ -58,13 +58,13 @@ if __name__ == "__main__":
         pickle.dump(model, f)
 
     # and column names too
-    with open('./chapter6/feature_names', mode='w') as f:
+    with open('./chapter6/feature_names', mode='w', encoding='utf-8') as f:
         f.write(str(feature_names))
 
     # 53. 予測
     # TODO あとでやる。
 
-    # 54. 正解率の計測
+    # 54. 正解率の計測   56. 適合率，再現率，F1スコアの計測
     y_test = test['y_label_category']
     y_pred = model.predict(test.drop('y_label_category', axis=1))
     print(classification_report(y_pred=y_pred, y_true=y_test))
